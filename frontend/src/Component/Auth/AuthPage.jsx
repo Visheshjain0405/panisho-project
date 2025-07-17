@@ -71,17 +71,17 @@ const AuthPage = () => {
     }
   };
 
-  const handleVerify = async (e) => {
-    e.preventDefault();
-    try {
-      await verifyEmail(otp);
-      toast.success('Email verified! You can now log in.');
-      setStep('login');
-    } catch (err) {
-      const msg = err.response?.data?.message || 'Wrong or expired OTP';
-      toast.error(msg);
-    }
-  };
+const handleVerify = async (e) => {
+  e.preventDefault();
+  try {
+    await verifyEmail(signupForm.email, otp); // Pass email explicitly
+    toast.success('Email verified! You are logged in.');
+    navigate('/');
+  } catch (err) {
+    const msg = err.response?.data?.message || 'Wrong or expired OTP';
+    toast.error(msg);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">

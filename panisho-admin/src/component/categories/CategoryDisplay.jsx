@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import Select from 'react-select';
 import CategoryAddModal from './CategoryAddModal';
 import CategoryEditModal from './CategoryEditModal';
 import api from '../../api/axiosInstance';
 
 const CategoryDisplay = () => {
   const [categories, setCategories] = useState([]);
+  const [navbarCategories, setNavbarCategories] = useState([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   useEffect(() => {
     fetchCategories();
+    fetchNavbarCategories();
   }, []);
 
   const fetchCategories = async () => {
@@ -19,6 +22,18 @@ const CategoryDisplay = () => {
       setCategories(response.data);
     } catch (error) {
       console.error('Error fetching categories:', error);
+    }
+  };
+
+  const fetchNavbarCategories = async () => {
+    try {
+      const response = await api.get('/navbar-categories');
+      setNavbarCategories(response.data.map(cat => ({
+        value: cat._id,
+        label: cat.title
+      })));
+    } catch (error) {
+      console.error('Error fetching navbar categories:', error);
     }
   };
 
@@ -57,6 +72,13 @@ const CategoryDisplay = () => {
         >
           Add Category
         </button>
+      </div>
+      <div className="mb-6">
+        <Select
+          options={navbarCategories}
+          placeholder="Select navbar category"
+          isClearable
+        />
       </div>
       <div className="overflow-x-auto">
         <div className="grid grid-cols-1 sm:grid-cols-[auto,1fr,auto,auto] gap-4 bg-gray-100 rounded-md p-4">

@@ -131,6 +131,7 @@ const OrderDisplay = () => {
           order._id?.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
           order.userId?.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
           order.addressId?.toString().toLowerCase().includes(searchTerm.toLowerCase()),
+
       );
     }
     if (selectedStatus) {
@@ -283,7 +284,9 @@ const OrderDisplay = () => {
         <div className="order-slip">
           {/* Header */}
           <div className="order-header">
-            <div className="logo">PANISHO</div>
+            <div className="logo">
+              <img src='https://res.cloudinary.com/dvqgcj6wn/image/upload/v1750615825/panisho_logo__page-0001-removebg-preview_hdipnw.png' alt="Company Logo" />
+            </div>
             <div className="order-info">
               <div><strong>Order ID:</strong> {order._id}</div>
               <div><strong>Date:</strong> {formatDate(order.createdAt)}</div>
@@ -299,6 +302,7 @@ const OrderDisplay = () => {
               <div>{order.userId?.phone}</div>
               <div style={{ marginTop: '8px' }}>
                 {order.addressId?.street}<br />
+                Landmark: {order.addressId?.landmark}<br />
                 {order.addressId?.city}, {order.addressId?.state}<br />
                 PIN: {order.addressId?.pincode}<br />
                 India
@@ -306,12 +310,12 @@ const OrderDisplay = () => {
             </div>
             <div className="address">
               <div className="section-title">Ship From</div>
-              <div>Panisho Beauty Pvt. Ltd.</div>
-              <div>Panisho House, 2nd Floor</div>
-              <div>Business Hub Complex, Ring Road</div>
-              <div>Surat - 395002, Gujarat</div>
-              <div>Phone: +91 99999 88888</div>
-              <div>Email: orders@panisho.com</div>
+              <div>Panisho</div>
+              <div>31 Reva Nagar</div>
+              <div>Near South Zone Office, Udhana</div>
+              <div>Surat – 394210, Gujarat</div>
+              <div>Phone: +91 8160467524</div>
+              <div>Email: Support@panisho.com</div>
             </div>
           </div>
 
@@ -872,7 +876,9 @@ const OrderDisplay = () => {
                       </h3>
                       <div className="bg-white rounded-xl p-4 border border-orange-100">
                         <div className="space-y-2">
-                          <p className="font-medium text-gray-900">{selectedOrder.addressId.street}</p>
+                          <p className="font-medium text-gray-900">{selectedOrder.addressId.street}</p> 
+                          <p className="font-medium text-gray-900">Landmark :- {selectedOrder.addressId.landmark}</p>
+
                           <p className="text-gray-600">
                             {selectedOrder.addressId.city}, {selectedOrder.addressId.state}
                           </p>

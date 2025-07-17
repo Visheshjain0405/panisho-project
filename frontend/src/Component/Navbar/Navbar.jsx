@@ -4,6 +4,9 @@ import { Heart, ShoppingBag, User, ChevronDown, Menu, X, Search } from 'lucide-r
 import { AuthContext } from '../../context/AuthContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useCart } from '../../context/CartContext';
+import SearchBar from './SearchBar';
+import api from '../../api/axiosInstance';
+
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,14 +15,83 @@ const Navbar = () => {
   const { user } = useContext(AuthContext);
   const { wishlist } = useWishlist();
   const { cart } = useCart();
+  const [beautyProductsItems, setBeautyProductsItems] = useState([]);
+  const [hairProductsItems, setHairProductsItems] = useState([]);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
+      setActiveDropdown(null);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    const fetchNavbarCategories = async () => {
+      try {
+        const response = await api.get('/navbar-categories');
+        const data = response.data;
+        console.log("navbar data", data);
+        // Group categories based on navbarCategory type
+        const beauty = data
+          .filter(item => item.navbarCategory === 'Beauty Products')
+          .map(item => ({
+            name: item.category.title,
+            path: `/beauty-products/${item.category.slug}`,
+          }));
+
+        const hair = data
+          .filter(item => item.navbarCategory === 'Hair Products')
+          .map(item => ({
+            name: item.category.title,
+            path: `/hair-products/${item.category.slug}`,
+          }));
+
+        setBeautyProductsItems(beauty);
+        setHairProductsItems(hair);
+        console.log(beautyProductsItems);
+        console.log(hairProductsItems);
+      } catch (error) {
+        console.error('Failed to fetch navbar categories:', error);
+      }
+    };
+
+    fetchNavbarCategories();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      // If user clicks outside dropdown button or menu, close it
+      if (
+        !e.target.closest('.dropdown-toggle') &&
+        !e.target.closest('.dropdown-menu')
+      ) {
+        setActiveDropdown(null);
+      }
+    };
+
+    const handleRouteChange = () => {
+      setActiveDropdown(null);
+    };
+
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+      setActiveDropdown(null); // Close dropdown on scroll
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    window.addEventListener('popstate', handleRouteChange);
+    window.addEventListener('scroll', handleScroll);
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+      window.removeEventListener('popstate', handleRouteChange);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -27,31 +99,20 @@ const Navbar = () => {
   };
 
   const toggleDropdown = (dropdown) => {
-    setActiveDropdown(prev => prev === dropdown ? null : dropdown);
+    setActiveDropdown((prev) => (prev === dropdown ? null : dropdown));
   };
 
-  const beautyProductsItems = [
-    { name: 'Facewash', path: '/beauty-products/facewash' },
-    { name: 'Face Serum', path: '/beauty-products/face-serum' },
-    { name: 'Sunscreen', path: '/beauty-products/sunscreen' },
-  ];
-
-  const hairProductsItems = [
-    { name: 'Shampoo', path: '/hair-products/shampoo' },
-    { name: 'Conditioner', path: '/hair-products/conditioner' },
-    { name: 'Beard Oil', path: '/hair-products/beard-oil' },
-  ];
 
   const CartCount = () => {
     return cart.length > 0 ? (
-      <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center shadow-md transition-all duration-300">
+      <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center shadow-md transition-all duration- rl: 300">
         {cart.length}
       </span>
     ) : null;
   };
 
   return (
-    <nav className={`w-full fixed top-0 z-[1100] transition-all duration-300 ${isScrolled ? 'bg-white shadow-2xl' : 'bg-white shadow-md'}`}>
+    <nav className={`font-Poppins w-full fixed top-0 z-[1100] transition-all duration-300 ${isScrolled ? 'bg-white shadow-2xl' : 'bg-white shadow-md'}`}>
       <div className="bg-pink-100 text-gray-800 py-2 text-center text-xs sm:text-sm font-medium tracking-wide">
         FREE STANDARD SHIPPING ON ABOVE 499 ORDER
       </div>
@@ -73,7 +134,11 @@ const Navbar = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
               <span className="text-xl sm:text-2xl font-bold text-pink-600 uppercase tracking-tight">
-                PAN<span className="text-pink-500 italic">ISHO</span>
+                <img
+                  src="https://res.cloudinary.com/dvqgcj6wn/image/upload/v1750615825/panisho_logo__page-0001-removebg-preview_hdipnw.png"
+                  alt="Panisho Logo"
+                  className="lg:h-[70px] h-14"
+                />
               </span>
             </Link>
           </div>
@@ -92,7 +157,7 @@ const Navbar = () => {
             <div className="relative group">
               <button
                 onClick={() => toggleDropdown('beauty')}
-                className="flex items-center text-gray-800 hover:text-pink-600 font-medium text-sm uppercase tracking-wide relative focus:outline-none"
+                className="dropdown-toggle flex items-center text-gray-800 hover:text-pink-600 font-medium text-sm uppercase tracking-wide relative focus:outline-none"
                 aria-expanded={activeDropdown === 'beauty'}
                 aria-haspopup="true"
               >
@@ -101,7 +166,7 @@ const Navbar = () => {
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-pink-500 group-hover:w-full transition-all duration-300" />
               </button>
               {activeDropdown === 'beauty' && (
-                <div className="absolute left-0 mt-3 w-48 bg-white rounded-lg shadow-xl z-50 py-2 transform origin-top scale-95 transition-all duration-200 ease-out hover:scale-100">
+                <div className="dropdown-menu absolute left-0 mt-3 w-48 bg-white rounded-lg shadow-xl z-50 py-2 transform origin-top scale-95 transition-all duration-200 ease-out hover:scale-100">
                   {beautyProductsItems.map((item, idx) => (
                     <Link
                       key={idx}
@@ -120,7 +185,7 @@ const Navbar = () => {
             <div className="relative group">
               <button
                 onClick={() => toggleDropdown('hair')}
-                className="flex items-center text-gray-800 hover:text-pink-600 font-medium text-sm uppercase tracking-wide relative focus:outline-none"
+                className="dropdown-toggle flex items-center text-gray-800 hover:text-pink-600 font-medium text-sm uppercase tracking-wide relative focus:outline-none"
                 aria-expanded={activeDropdown === 'hair'}
                 aria-haspopup="true"
               >
@@ -129,7 +194,7 @@ const Navbar = () => {
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-pink-500 group-hover:w-full transition-all duration-300" />
               </button>
               {activeDropdown === 'hair' && (
-                <div className="absolute left-0 mt-3 w-48 bg-white rounded-lg shadow-xl z-50 py-2 transform origin-top scale-95 transition-all duration-200 ease-out hover:scale-100">
+                <div className="dropdown-menu absolute left-0 mt-3 w-48 bg-white rounded-lg shadow-xl z-50 py-2 transform origin-top scale-95 transition-all duration-200 ease-out hover:scale-100">
                   {hairProductsItems.map((item, idx) => (
                     <Link
                       key={idx}
@@ -160,24 +225,18 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Right Section - Icons */}
+          {/* Right Section - Icons and Search */}
           <div className="flex items-center space-x-3 sm:space-x-4">
+            <div className="hidden md:block">
+              <SearchBar />
+            </div>
             <Link
-              to="/search"
-              className="text-pink-600 hover:text-pink-800 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all duration-200 hover:scale-110"
-              aria-label="Search"
-            >
-              <Search size={20} />
-            </Link>
-
-            <Link
-              to={user ? "/profile" : "/account"}
+              to={user ? '/profile' : '/account'}
               className="text-pink-600 hover:text-pink-800 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all duration-200 hover:scale-110"
               aria-label="My Account"
             >
               <User size={20} />
             </Link>
-
             <Link
               to="/wishlist"
               className="text-pink-600 hover:text-pink-800 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-pink-300 relative transition-all duration-200 hover:scale-110"
@@ -190,7 +249,6 @@ const Navbar = () => {
                 </span>
               )}
             </Link>
-
             <Link
               to="/cart"
               className="text-pink-600 hover:text-pink-800 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-pink-300 relative transition-all duration-200 hover:scale-110"
@@ -219,7 +277,7 @@ const Navbar = () => {
             <div>
               <button
                 onClick={() => toggleDropdown('mobile-beauty')}
-                className="flex items-center justify-between w-full text-gray-800 hover:bg-pink-50 hover:text-pink-600 px-4 py-2.5 rounded-lg font-medium text-sm uppercase tracking-wide transition-all duration-200"
+                className="dropdown-toggle flex items-center justify-between w-full text-gray-800 hover:bg-pink-50 hover:text-pink-600 px-4 py-2.5 rounded-lg font-medium text-sm uppercase tracking-wide transition-all duration-200"
               >
                 Beauty Products
                 <ChevronDown
@@ -228,7 +286,7 @@ const Navbar = () => {
                 />
               </button>
               {activeDropdown === 'mobile-beauty' && (
-                <div className="pl-6 mt-2 space-y-2 border-l-2 border-pink-200">
+                <div className="dropdown-menu pl-6 mt-2 space-y-2 border-l-2 border-pink-200">
                   {beautyProductsItems.map((item, idx) => (
                     <Link
                       key={idx}
@@ -247,7 +305,7 @@ const Navbar = () => {
             <div>
               <button
                 onClick={() => toggleDropdown('mobile-hair')}
-                className="flex items-center justify-between w-full text-gray-800 hover:bg-pink-50 hover:text-pink-600 px-4 py-2.5 rounded-lg font-medium text-sm uppercase tracking-wide transition-all duration-200"
+                className="dropdown-toggle flex items-center justify-between w-full text-gray-800 hover:bg-pink-50 hover:text-pink-600 px-4 py-2.5 rounded-lg font-medium text-sm uppercase tracking-wide transition-all duration-200"
               >
                 Hair Products
                 <ChevronDown
@@ -256,7 +314,7 @@ const Navbar = () => {
                 />
               </button>
               {activeDropdown === 'mobile-hair' && (
-                <div className="pl-6 mt-2 space-y-2 border-l-2 border-pink-200">
+                <div className="dropdown-menu pl-6 mt-2 space-y-2 border-l-2 border-pink-200">
                   {hairProductsItems.map((item, idx) => (
                     <Link
                       key={idx}

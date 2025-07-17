@@ -42,7 +42,7 @@ export default function CartPage() {
 
 
 
-  const shipping = subtotal > 499 ? 0 : 100; // Free shipping for orders above ₹499, else ₹100
+  const shipping = subtotal > 499 ? 0 : 59; // Free shipping for orders above ₹499, else ₹100
   const grandTotal = subtotal + shipping - discountAmount;
 
 

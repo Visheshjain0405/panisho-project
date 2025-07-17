@@ -12,6 +12,10 @@ import Coupouns from './pages/Coupouns';
 import Users from './pages/Users';
 import CustomerReviews from './pages/CustomerReviews';
 import SliderImages from './pages/SliderImages';
+import CustomerSupport from './pages/CustomerSupport';
+import Payments from './pages/Payments';
+import NavbarCategories from './pages/NavbarCategories';
+import Reports from './pages/Reports';
 function App() {
   return (
     <>
@@ -34,6 +38,10 @@ function App() {
         <Route path='/users' element={<Users/>}/>
         <Route path='/reviews' element={<CustomerReviews/>}/>
         <Route path='/sliderimages' element={<SliderImages/>}/>
+        <Route path='/customersupport' element={<CustomerSupport/>}/>
+        <Route path='/payments' element={<Payments/>}/>
+        <Route path='/navbarcategories' element={<NavbarCategories/>}/>
+        <Route path='/reports' element={<Reports/>}/>
       </Routes>
     </>
   );

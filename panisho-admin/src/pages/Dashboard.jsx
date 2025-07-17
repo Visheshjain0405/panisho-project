@@ -23,33 +23,61 @@ const Dashboard = () => {
   const [recentOrders, setRecentOrders] = useState([]);
   const [recentReviews, setRecentReviews] = useState([]);
 
+  const filteredOrders = recentOrders.filter(order => {
+    if (orderFilter === 'all') return true;
+    return order.status?.toLowerCase() === orderFilter;
+  });
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const { data } = await api.get('/dashboard/stats');
+        const { startDate, endDate } = getDateRange(selectedPeriod);
+        const { data } = await api.get('/dashboard/stats', {
+          params: { startDate, endDate }
+        });
+
         setStatsData(data);
-        setOrderGraphData(
-          data.dailyChart.sort((a, b) => new Date(a.date) - new Date(b.date))
-        );
+        setOrderGraphData(data.dailyChart || []);
+        setMonthlyRevenueData(data.monthlyChart || []);
         setOrderStatusData(
-          data.orderStatusData.map(({ name, value }) => ({
-            name,
-            value,
-            color: getRandomColor(name)
+          (data.orderStatusData || []).map((entry) => ({
+            ...entry,
+            color: getRandomColor(entry.name)  // <- Add this line
           }))
         );
-        setMonthlyRevenueData(data.monthlyChart);
-        setRecentOrders(data.recentOrders);
-        setRecentReviews(data.recentReviews);
+        setRecentOrders(data.recentOrders || []);
+        setRecentReviews(data.recentReviews || []);
+
       } catch (err) {
         console.error('Dashboard fetch failed', err);
       }
     };
 
     fetchDashboardData();
-  }, []);
+  }, [selectedPeriod]);
 
+
+  const getDateRange = (period) => {
+    const end = new Date();
+    const start = new Date();
+    switch (period) {
+      case '7d':
+        start.setDate(end.getDate() - 7);
+        break;
+      case '30d':
+        start.setDate(end.getDate() - 30);
+        break;
+      case '90d':
+        start.setDate(end.getDate() - 90);
+        break;
+      default:
+        start.setDate(end.getDate() - 7);
+    }
+    return {
+      startDate: start.toISOString().split('T')[0],
+      endDate: end.toISOString().split('T')[0]
+    };
+  };
 
 
   const getRandomColor = (status) => {
@@ -60,9 +88,11 @@ const Dashboard = () => {
       shipped: '#8B5CF6',
       delivered: '#22C55E',
       cancelled: '#EF4444',
+      unknown: '#9CA3AF'
     };
-    return colors[status?.toLowerCase()] || '#9CA3AF';  // convert to lowercase
+    return colors[status?.toLowerCase()] || '#9CA3AF';
   };
+
 
 
 
@@ -145,13 +175,13 @@ const Dashboard = () => {
               title="Total Revenue"
               value={formatCurrency(statsData.totalRevenue)}
               icon={IndianRupee}
-              change={12.5}
+              change={statsData.revenueChange}
             />
             <StatCard
               title="Total Orders"
               value={statsData.totalOrders.toLocaleString('en-IN')}
               icon={ShoppingCart}
-              change={8.2}
+              change={statsData.ordersChange}
             />
             <StatCard
               title="Pending Orders"
@@ -162,7 +192,7 @@ const Dashboard = () => {
               title="Total Customers"
               value={statsData.totalCustomers.toLocaleString('en-IN')}
               icon={Users}
-              change={15.3}
+              change={statsData.customersChange}
             />
           </div>
 
@@ -270,7 +300,7 @@ const Dashboard = () => {
                 </select>
               </div>
               <div className="space-y-4 max-h-96 overflow-y-auto">
-                {recentOrders.map((order) => (
+                {filteredOrders.map((order) => (
                   <div
                     key={order.id}
                     className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
@@ -291,10 +321,6 @@ const Dashboard = () => {
                     </div>
                     <div className="text-right ml-4">
                       <p className="font-semibold text-gray-900">{formatCurrency(order.amount)}</p>
-                      <button className="text-blue-600 text-sm hover:text-blue-700 mt-1 flex items-center">
-                        <Eye className="w-4 h-4 mr-1" />
-                        View
-                      </button>
                     </div>
                   </div>
                 ))}
@@ -323,8 +349,6 @@ const Dashboard = () => {
             </div>
 
           </div>
-
-
         </div>
       </div>
     </div>

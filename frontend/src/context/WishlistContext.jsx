@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api/axiosInstance';
 import { AuthContext } from './AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 const WishlistContext = createContext();
 
@@ -22,7 +23,10 @@ export function WishlistProvider({ children }) {
     api
       .get('/wishlist', { withCredentials: true })
       .then(({ data }) => {
-        setWishlist(data.map((p) => p._id));
+        if (data.data.length === 0) {
+          toast.info('Wishlist is empty');
+        }
+        setWishlist(data.data.map((p) => p._id)); // ✅ Corrected path
       })
       .catch((err) => {
         console.error('Failed to load wishlist', err);
@@ -30,6 +34,7 @@ export function WishlistProvider({ children }) {
       })
       .finally(() => setLoading(false));
   }, [user]);
+
 
   // Toggle wishlist with optimistic updates
   const toggleWishlist = async (productId) => {

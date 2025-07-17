@@ -30,8 +30,8 @@ export default function CheckoutPage() {
     state: '',
     pincode: '',
     phone: '',
+    landmark: '',
   });
-
   const [couponCode, setCouponCode] = useState('');
   const { setAppliedCoupon, setDiscountAmount } = useCoupon();
 
@@ -76,7 +76,7 @@ export default function CheckoutPage() {
 
 
 
-  const shipping = subtotal > 499 ? 0 : 99;
+  const shipping = subtotal > 499 ? 0 : 59;
   const total = subtotal + shipping;
 
 
@@ -364,7 +364,7 @@ export default function CheckoutPage() {
                     >
                       <div className="flex justify-between items-start mb-2">
                         <span className="flex gap-2 items-center font-semibold text-gray-700 capitalize">
-                          {addr.type === 'home' ? <Home size={16} /> : <Building2 size={16} />} {addr.type}
+                          {addr.type === 'home' ? <Home size={16} /> : addr.type === 'office' ? <Building2 size={16} /> : <MapPin size={16} />} {addr.type}
                         </span>
                         <button
                           onClick={(e) => {
@@ -379,6 +379,7 @@ export default function CheckoutPage() {
                       </div>
                       <p className="font-medium">{addr.name}</p>
                       <p className="text-sm text-gray-600">{addr.street}</p>
+                      {addr.landmark && <p className="text-sm text-gray-600">Landmark: {addr.landmark}</p>}
                       <p className="text-sm text-gray-600">{addr.city}, {addr.state} - {addr.pincode}</p>
                       <p className="text-sm text-gray-600 mt-1 flex gap-1 items-center"><Phone size={14} />{addr.phone}</p>
                     </div>
@@ -388,6 +389,15 @@ export default function CheckoutPage() {
                   <div className="mt-6 border border-pink-300 p-4 rounded-xl bg-pink-50">
                     <h3 className="font-bold text-pink-600 mb-4">Add New Address</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                      <select
+                        value={newAddress.type}
+                        onChange={e => setNewAddress({ ...newAddress, type: e.target.value })}
+                        className="border p-2 rounded col-span-full"
+                      >
+                        <option value="home">Home</option>
+                        <option value="office">Office</option>
+                        <option value="other">Other</option>
+                      </select>
                       <input
                         type="text"
                         value={newAddress.name}
@@ -408,6 +418,13 @@ export default function CheckoutPage() {
                         onChange={e => setNewAddress({ ...newAddress, street: e.target.value })}
                         placeholder="Street Address"
                         className="border p-2 rounded col-span-full"
+                      />
+                      <input
+                        type="text"
+                        value={newAddress.landmark}
+                        onChange={e => setNewAddress({ ...newAddress, landmark: e.target.value })}
+                        placeholder="Landmark"
+                        className="border p-2 rounded"
                       />
                       <input
                         type="text"
@@ -503,16 +520,25 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                   {paymentMethod === 'cod' && (
-                    <div className="bg-pink-50 rounded-2xl p-6 border border-pink-200">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Cash on Delivery</h3>
-                      <div className="flex items-center gap-3 text-gray-600">
-                        <Truck size={20} className="text-pink-600" />
-                        <div>
-                          <p className="font-medium">Pay when you receive</p>
-                          <p className="text-sm">Cash payment to delivery partner</p>
+                    <>
+                      <div className="bg-pink-50 rounded-2xl p-6 border border-pink-200 mt-4">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Cash on Delivery</h3>
+                        <div className="flex items-center gap-3 text-gray-600">
+                          <Truck size={20} className="text-pink-600" />
+                          <div>
+                            <p className="font-medium">Pay when you receive</p>
+                            <p className="text-sm">Cash payment to delivery partner</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
+
+                      <div className="mt-4 bg-yellow-100 text-yellow-800 border-l-4 border-yellow-400 p-4 rounded-lg text-sm">
+                        <p>
+                          ⚠️ Orders with <strong>Cash on Delivery</strong> may take longer to dispatch.
+                          For <strong>faster delivery (3–5 days)</strong>, choose <strong>Prepaid (UPI or Card)</strong>.
+                        </p>
+                      </div>
+                    </>
                   )}
                   <div className="flex justify-between mt-6">
                     <button

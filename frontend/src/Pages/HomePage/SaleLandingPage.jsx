@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Star, ShoppingCart } from 'lucide-react';
 import api from '../../api/axiosInstance';
+import { useCart } from '../../context/CartContext';
+import { useNavigate } from 'react-router-dom';
 
 const SaleBanner = () => {
   const [timeLeft, setTimeLeft] = useState({
@@ -12,6 +14,8 @@ const SaleBanner = () => {
 
   const [leftProducts, setLeftProducts] = useState([]);
   const [rightProducts, setRightProducts] = useState([]);
+  const { addToCart } = useCart();
+  const navigate = useNavigate();
 
   // Countdown Timer
   useEffect(() => {
@@ -65,7 +69,10 @@ const SaleBanner = () => {
       : 0;
 
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-4 flex items-start gap-4 hover:shadow-xl transition-shadow duration-300 border border-pink-100 w-full">
+      <div
+        onClick={() => navigate(`/product/${product.slug}`)}
+        className="cursor-pointer bg-white rounded-2xl shadow-lg p-4 flex items-start gap-4 hover:shadow-xl transition-shadow duration-300 border border-pink-100 w-full"
+      >
         <div className="relative flex-shrink-0">
           <img
             src={product.images?.[0] || 'https://via.placeholder.com/80'}
@@ -77,10 +84,10 @@ const SaleBanner = () => {
           </div>
         </div>
         <div className="flex-1">
-          <div className="text-xs uppercase font-semibold text-pink-600 tracking-wide">
+          <div className="text-xs uppercase font-semibold text-pink-600 tracking-wide text-start">
             {product.category?.title || 'PRODUCT'}
           </div>
-          <h3 className="text-sm sm:text-base font-bold text-gray-800 mt-1 line-clamp-2">{product.name}</h3>
+          <h3 className="text-sm sm:text-base font-bold text-gray-800 mt-1 line-clamp-2 text-start">{product.name}</h3>
           <div className="flex items-center gap-1 mt-2">
             <div className="flex text-pink-400">
               {[...Array(5)].map((_, i) => (
@@ -100,10 +107,22 @@ const SaleBanner = () => {
               ₹{variant.mrp?.toFixed(2)}
             </p>
           </div>
-          <button className="mt-2 bg-pink-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-pink-600 transition-colors duration-200 flex items-center gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation(); // ✅ prevent navigation
+              addToCart({
+                productId: product._id,
+                variant: product.variants?.[0],
+                quantity: 1,
+              });
+            }}
+            className="mt-2 bg-pink-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-pink-600 transition-colors duration-200 flex items-center gap-1"
+          >
             <ShoppingCart className="w-3 h-3" />
             Add to Cart
           </button>
+
+
         </div>
       </div>
     );
@@ -150,7 +169,7 @@ const SaleBanner = () => {
         {/* Center Image */}
         <div className="flex justify-center items-center w-full max-w-md md:max-w-lg my-6 md:my-0">
           <img
-            src="https://res.cloudinary.com/djh2ro9tm/image/upload/v1751743238/model-removebg-preview_nuugeh.png"
+            src="https://res.cloudinary.com/dvqgcj6wn/image/upload/v1752518417/A_beautiful_traditional_Indian_female_model_with_fair__glowing_skin__wearing_an_elegant__richly_detailed_saree_in_soft_tones__like_cream__gold__or_pastel_._She_is_adorned_with_subtle_traditional_jewel_1_it0yve.png"
             alt="Model"
             className="w-full h-auto object-contain max-h-[400px] md:max-h-[600px]"
           />

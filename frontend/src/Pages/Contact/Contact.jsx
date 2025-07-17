@@ -174,8 +174,7 @@ export default function ContactUs() {
               ) : (
                 <div className="space-y-6">
                   {error && (
-                    <div className="bg-red-50 border-2 border-red-100 rounded-xl p-4 text-center text-red-700">
-                      {error}
+                    <div className="">
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

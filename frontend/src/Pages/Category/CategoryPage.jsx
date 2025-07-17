@@ -309,7 +309,7 @@ export default function CategoryPage() {
           {/* Products */}
           {filtered.length === 0 ? (
             <p className="text-center text-gray-600 py-20">
-              No products found.
+              No products found.as
             </p>
           ) : viewMode === 'list' ? (
             <div className="space-y-6">

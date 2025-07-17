@@ -90,7 +90,6 @@ function Users() {
                   <TableHeader>Registration</TableHeader>
                   <TableHeader>Last Login</TableHeader>
                   <TableHeader>Orders</TableHeader>
-                  <TableHeader>Total Spent</TableHeader>
                   <TableHeader>Actions</TableHeader>
                 </tr>
               </thead>
@@ -126,20 +125,8 @@ function Users() {
                       {new Date(user.lastLogin).toLocaleDateString()}
                     </td>
                     <td className="py-4 px-6 text-gray-700 font-medium">{user.totalOrders}</td>
-                    <td className="py-4 px-6 text-gray-700 font-medium">${user.totalSpent.toFixed(2)}</td>
-                    <td className="py-4 px-6">
-                      <div className="flex gap-2">
-                        <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => deleteUser(user.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
+                    <td className="py-4 px-6 text-gray-700 font-medium">₹ {user.totalSpent.toFixed(2)}</td>
+
                   </tr>
                 ))}
               </tbody>
@@ -157,16 +144,15 @@ function Users() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-center mt-6 gap-2">
+          <div className="flex justify-end mt-6 pr-1 gap-2">
             {Array.from({ length: totalPages }, (_, i) => (
               <button
                 key={i}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                  currentPage === i + 1
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${currentPage === i + 1
                     ? 'bg-black text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 {i + 1}
               </button>

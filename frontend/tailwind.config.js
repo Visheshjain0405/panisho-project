@@ -25,6 +25,7 @@ module.exports = {
       fontFamily: {
         sans: ['Inter', 'sans-serif'], // Clean, modern font for a beauty brand
         Jost: ['Jost', 'sans-serif'],
+        Poppins: ['Poppins', 'sans-serif'],
       },
     },
   },

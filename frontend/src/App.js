@@ -18,32 +18,41 @@ import ProfilePage from './Pages/Profile/ProfilePage';
 import ProductDetail from './Component/Product/ProductDetail';
 import CheckoutPage from './Pages/Checkout/CheckoutPage';
 import HomePage from './Pages/HomePage/HomePage';
+import SearchResults from './Component/Product/SearchResults';
+import AllProductsPage from './Component/Product/AllProductsPage';
+import ResetPassword from './Component/Auth/ResetPassword';
+import FAQ from './Pages/OtherPages/FAQ';
+import ShippingReturn from './Pages/OtherPages/ShippingReturn';
+import PrivacyPolicy from './Pages/OtherPages/PrivacyPolicy';
+import TermsConditions from './Pages/OtherPages/TermsConditions';
+import ScrollToTop from './Component/Comman/ScrollToTop';
 
 function App() {
   const location = useLocation();
-  
+
   // Define routes where navbar and footer should be hidden
   const hideNavigationRoutes = ['/account', '/verify-email'];
-  
+
   // Check if current route should hide navigation
   const shouldHideNavigation = hideNavigationRoutes.includes(location.pathname);
 
   return (
     <div className="App">
       <ToastContainer />
-      
+
       {/* Conditionally render Navbar */}
       {!shouldHideNavigation && <Navbar />}
-      
+
       {/* Main content area with conditional padding */}
       <div className={shouldHideNavigation ? '' : 'pt-24 md:pt-28 lg:pt-32 bg-pink-50'}>
+        <ScrollToTop/>
         <Routes>
-          <Route path='/' element={<HomePage/>}/>
+          <Route path='/' element={<HomePage />} />
           <Route path="/about" element={<AboutUs />} />
           <Route path="/contact" element={<ContactUs />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/account" element={<AuthPage />} />
-          
+
           {/* Category routes: Beauty */}
           <Route
             path="/beauty-products/:categorySlug"
@@ -59,9 +68,15 @@ function App() {
           <Route path='/wishlist' element={<WishlistPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/product/:id" element={<ProductDetail  />} />
-          <Route path='/checkout' element={<CheckoutPage/>}/>
-
+          <Route path="/product/:slug" element={<ProductDetail />} />
+          <Route path='/checkout' element={<CheckoutPage />} />
+          <Route path="/search" element={<SearchResults />} />
+          <Route path='/products' element={<AllProductsPage />} />
+          <Route path='/reset-password/:token' element={<ResetPassword/>}/>
+          <Route path='/faq' element={<FAQ/>}/>
+          <Route path='/shipping' element={<ShippingReturn/>}/>
+          <Route path='/privacy' element={<PrivacyPolicy/>}/>
+          <Route path='/terms' element={<TermsConditions/>}/>
           {/* A fallback 404 route (optional) */}
           <Route
             path="*"
@@ -73,11 +88,11 @@ function App() {
           />
         </Routes>
       </div>
-      
+
       {/* Conditionally render Footer */}
       {!shouldHideNavigation && <Footer />}
 
-      
+
     </div>
   );
 }

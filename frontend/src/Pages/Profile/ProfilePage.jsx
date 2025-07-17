@@ -5,10 +5,13 @@ import {
 } from 'lucide-react';
 import api from '../../api/axiosInstance';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom'; // ✅ add this line
 import { useWishlist } from '../../context/WishlistContext';
+import ProductCard from '../../Component/Product/ProductCard'; // Add this at the top
 
 export default function ProfilePage() {
   const { user, loading: authLoading, logout } = useAuth() || { user: null, loading: true };
+  const navigate = useNavigate(); // ✅ add this line
   const { wishlist, loading: wishlistLoading } = useWishlist();
   const [activeSection, setActiveSection] = useState('orders');
   const [orderFilter, setOrderFilter] = useState('all');
@@ -20,10 +23,18 @@ export default function ProfilePage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isEditAddressModalOpen, setIsEditAddressModalOpen] = useState(false);
-  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
-  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
-  const [editAddressForm, setEditAddressForm] = useState({ id: '', type: 'home', name: '', street: '', city: '', state: '', pincode: '', phone: '' });
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false); // Single address modal state
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false); // Added back
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false); // Added back
+  const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+
+  const [editAddressForm, setEditAddressForm] = useState({
+    id: '', type: 'home', name: '', street: '', city: '', state: '', pincode: '', phone: '', landmark: ''
+  });
+  const [addAddressForm, setAddAddressForm] = useState({
+    type: 'home', name: '', phone: '', street: '', landmark: '', city: '', state: '', pincode: ''
+  });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [contactForm, setContactForm] = useState({ subject: '', message: '' });
 
@@ -65,14 +76,18 @@ export default function ProfilePage() {
     };
 
     const fetchWishlistProducts = async () => {
-      if (!user || wishlist.length === 0) return;
+      if (!user || wishlist.length === 0) {
+        setWishlistProducts([]);
+        return;
+      }
+
       try {
-        const response = await api.get('/products', { params: { ids: wishlist.join(',') } });
-        console.log('Fetched wishlist products:', response.data);
-        if (isMounted) setWishlistProducts(response.data || []);
+        const response = await api.get('/products'); // Fetch all products
+        const filtered = response.data.filter((product) => wishlist.includes(product._id));
+        setWishlistProducts(filtered);
       } catch (err) {
         console.error('Wishlist products fetch error:', err);
-        if (isMounted) setError('Failed to fetch wishlist products. Please try again.');
+        setError('Failed to fetch wishlist products. Please try again.');
       }
     };
 
@@ -117,12 +132,18 @@ export default function ProfilePage() {
     return matchesFilter && matchesSearch;
   });
 
-  const getExpectedDeliveryDate = (createdAt) => {
-    return createdAt ? new Date(new Date(createdAt).setDate(new Date(createdAt).getDate() + 7)).toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }) : 'N/A';
+  const getExpectedDeliveryWindow = (createdAt) => {
+    if (!createdAt) return 'N/A';
+
+    const orderDate = new Date(createdAt);
+    const start = new Date(orderDate);
+    const end = new Date(orderDate);
+
+    start.setDate(orderDate.getDate() + 5);
+    end.setDate(orderDate.getDate() + 7);
+
+    const formatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+    return `${start.toLocaleDateString('en-IN', formatOptions)} - ${end.toLocaleDateString('en-IN', formatOptions)}`;
   };
 
   const handleEditAddress = (address) => {
@@ -134,9 +155,10 @@ export default function ProfilePage() {
       city: address.city || '',
       state: address.state || '',
       pincode: address.pincode || '',
-      phone: address.phone || ''
+      phone: address.phone || '',
+      landmark: address.landmark || ''
     });
-    setIsEditAddressModalOpen(true);
+    setIsAddressModalOpen(true);
   };
 
   const handleAddressSubmit = async (e) => {
@@ -144,16 +166,36 @@ export default function ProfilePage() {
     try {
       setError(null);
       setSuccess(null);
-      const response = await api.put(`/address/${editAddressForm.id}`, editAddressForm);
-      console.log('Address updated:', response.data);
-      setAddresses(addresses.map(addr => addr._id === editAddressForm.id ? response.data : addr));
-      setSuccess('Address updated successfully!');
+      if (editAddressForm.id) {
+        // Edit existing address
+        const response = await api.put(`/address/${editAddressForm.id}`, editAddressForm);
+        console.log('Address updated:', response.data);
+        setAddresses(addresses.map(addr => addr._id === editAddressForm.id ? response.data : addr));
+        setSuccess('Address updated successfully!');
+      } else {
+        // Add new address
+        const response = await api.post('/address', addAddressForm);
+        console.log('Address added:', response.data);
+        setAddresses([...addresses, response.data]);
+        setSuccess('Address added successfully!');
+        setAddAddressForm({
+          type: 'home', name: '', phone: '', street: '', landmark: '', city: '', state: '', pincode: ''
+        });
+      }
       setTimeout(() => setSuccess(null), 3000);
-      setIsEditAddressModalOpen(false);
+      setIsAddressModalOpen(false);
     } catch (err) {
-      console.error('Update address error:', err);
-      setError(err.response?.data?.message || 'Failed to update address. Please try again.');
+      console.error('Address operation error:', err);
+      setError(err.response?.data?.message || 'Failed to save address. Please try again.');
     }
+  };
+
+  const handleAddAddress = () => {
+    setAddAddressForm({
+      type: 'home', name: '', phone: '', street: '', landmark: '', city: '', state: '', pincode: ''
+    });
+    setEditAddressForm({ id: '', type: 'home', name: '', street: '', city: '', state: '', pincode: '', phone: '', landmark: '' });
+    setIsAddressModalOpen(true);
   };
 
   const handlePasswordSubmit = async (e) => {
@@ -176,6 +218,25 @@ export default function ProfilePage() {
     } catch (err) {
       console.error('Change password error:', err);
       setError(err.response?.data?.message || 'Failed to change password. Please try again.');
+    }
+  };
+
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    try {
+      setError(null);
+      setSuccess(null);
+      await api.post('/auth/forgot-password', { email: forgotEmail });
+      setSuccess('Reset link sent! Please check your email.');
+      setForgotEmail('');
+      setTimeout(() => {
+        setIsForgotPasswordModalOpen(false);
+        setSuccess(null);
+      }, 3000);
+    } catch (err) {
+      console.error('Forgot password error:', err);
+      setError(err.response?.data?.message || 'Failed to send reset link. Please try again.');
     }
   };
 
@@ -397,7 +458,7 @@ export default function ProfilePage() {
                             </h4>
                             <p className="text-xs sm:text-sm text-gray-600 text-start">
                               <span className="font-medium text-blue-600">Expected delivery:</span>{' '}
-                              {getExpectedDeliveryDate(order.createdAt)} (within 7 days of order)
+                              {getExpectedDeliveryWindow(order.createdAt)} (5–7 days from order date)
                             </p>
                           </div>
                         )}
@@ -437,7 +498,9 @@ export default function ProfilePage() {
                 <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 mb-1">
                   {user?.firstName || 'N/A'} {user?.lastName || ''}
                 </h3>
-                <p className="text-gray-600 text-sm sm:text-base">Customer since 2024</p>
+                <p className="text-gray-600 text-sm sm:text-base">
+                  Customer since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}
+                </p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
@@ -478,14 +541,14 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
               <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-3">
                 <MapPin className="text-pink-500 w-6 h-6 sm:w-7 sm:h-7" />
-                Delivery Address
+                My Addresses
               </h2>
               <button
-                onClick={handleAddressSubmit}
-                className="flex items-center gap-2 text-pink-500 hover:text-pink-600 transition-colors font-medium text-sm sm:text-base"
+                onClick={handleAddAddress}
+                className="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white px-4 py-2 rounded-xl font-semibold transition-all hover:scale-105 shadow-md"
               >
                 <Plus className="w-4 h-4" />
-                Add New
+                Add New Address
               </button>
             </div>
 
@@ -504,48 +567,40 @@ export default function ProfilePage() {
                 {addresses.map((address) => (
                   <div
                     key={address._id}
-                    className="border border-pink-200 rounded-2xl p-5 sm:p-6 bg-gradient-to-br from-pink-50/30 to-white hover:shadow-lg transition-all duration-300 relative group"
+                    className="border border-pink-200 rounded-2xl p-5 sm:p-6 bg-gradient-to-br from-white to-pink-50/50 hover:shadow-lg transition-all duration-300 relative group"
                   >
-                    {/* Home Icon and Edit Button */}
                     <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-pink-600" fill="currentColor" viewBox="0 0 20 20">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center">
+                          <svg className="w-5 h-5 text-pink-600" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                           </svg>
                         </div>
-                        <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                        <span className="text-sm font-semibold text-pink-600 uppercase tracking-wide">
                           {address.type}
                         </span>
                       </div>
                       <button
                         onClick={() => handleEditAddress(address)}
-                        className="text-gray-400 hover:text-pink-600 transition-colors opacity-0 group-hover:opacity-100"
+                        className="text-pink-500 hover:text-pink-600 transition-colors opacity-0 group-hover:opacity-100"
                       >
-                        <Edit3 className="w-4 h-4" />
+                        <Edit3 className="w-5 h-5" />
                       </button>
                     </div>
 
-                    {/* Address Details */}
                     <div className="space-y-3 text-start">
                       <h3 className="text-lg sm:text-xl font-bold text-gray-800 leading-tight">
                         {address.name || 'Unnamed Address'}
                       </h3>
-
                       <div className="text-gray-600 text-sm sm:text-base leading-relaxed">
                         <p>{address.street}</p>
-                        {address.area && <p>{address.area}</p>}
+                        {address.landmark && <p>Landmark: {address.landmark}</p>}
                         <p>{address.city}, {address.state} - {address.pincode}</p>
                       </div>
-
                       <div className="flex items-center gap-2 text-gray-600 text-sm sm:text-base">
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                        </svg>
+                        <Phone className="w-4 h-4 text-pink-500" />
                         {address.phone}
                       </div>
-
-                      {/* Default Address Badge */}
                       {address.isDefault && (
                         <div className="pt-2">
                           <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-100 text-green-700 font-semibold text-xs">
@@ -587,20 +642,12 @@ export default function ProfilePage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {wishlistProducts.map((product) => (
-                  <div key={product._id} className="border-2 border-pink-100 rounded-2xl p-4 bg-white hover:shadow-md transition-all">
-                    <img
-                      src={product.images?.[0] || '/placeholder.jpg'}
-                      alt={product.name || 'Product Image'}
-                      className="w-full h-48 object-cover rounded-xl mb-4"
-                      onError={(e) => { e.target.src = '/placeholder.jpg'; }}
-                    />
-                    <h3 className="text-lg font-bold text-gray-800 mb-2">{product.name || 'N/A'}</h3>
-                    <p className="text-gray-600 text-sm line-clamp-2">{product.description || 'No description'}</p>
-                    <p className="text-lg font-bold text-pink-600 mt-2">{formatCurrency(product.price)}</p>
-                    {product.mrp > product.price && (
-                      <span className="text-sm text-red-500">{getDiscountPercentage(product.mrp, product.price)}% OFF</span>
-                    )}
-                  </div>
+                  <ProductCard
+                    key={product._id}
+                    product={product}
+                    viewMode="grid"
+                    className="h-full"
+                  />
                 ))}
               </div>
             )}
@@ -613,19 +660,36 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-4">
               <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-2">
                 <Lock className="text-pink-600 w-5 h-5 sm:w-6 sm:h-6" />
-                Security
+                Security Settings
               </h2>
-              <button
-                onClick={() => setIsChangePasswordModalOpen(true)}
-                className="flex items-center space-x-2 text-pink-600 hover:text-pink-700 transition-colors bg-pink-50 px-4 py-2 rounded-full hover:bg-pink-100"
-              >
-                <Lock className="w-4 h-4" />
-                <span className="font-medium text-sm sm:text-base">Change Password</span>
-              </button>
             </div>
-            <div className="text-gray-600 text-sm sm:text-base">Manage your account security settings.</div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div className="p-4 border border-pink-100 rounded-xl bg-pink-50 flex flex-col justify-between">
+                <h3 className="font-semibold text-gray-800 mb-2">Change Password</h3>
+                <p className="text-sm text-gray-600 mb-4">Update your current password to keep your account secure.</p>
+                <button
+                  onClick={() => setIsChangePasswordModalOpen(true)}
+                  className="w-full bg-pink-600 hover:bg-pink-700 text-white py-2 rounded-xl font-semibold transition-all"
+                >
+                  Change Password
+                </button>
+              </div>
+
+              <div className="p-4 border border-pink-100 rounded-xl bg-pink-50 flex flex-col justify-between">
+                <h3 className="font-semibold text-gray-800 mb-2">Forgot Password</h3>
+                <p className="text-sm text-gray-600 mb-4">Reset your password if you’ve forgotten it.</p>
+                <button
+                  onClick={() => setIsForgotPasswordModalOpen(true)}
+                  className="w-full bg-pink-600 hover:bg-pink-700 text-white py-2 rounded-xl font-semibold transition-all"
+                >
+                  Forgot Password
+                </button>
+              </div>
+            </div>
           </div>
         );
+
 
       case 'contact':
         return (
@@ -635,17 +699,39 @@ export default function ProfilePage() {
                 <MessageCircle className="text-pink-600 w-5 h-5 sm:w-6 sm:h-6" />
                 Contact Support
               </h2>
-              <button
-                onClick={() => setIsContactModalOpen(true)}
-                className="flex items-center space-x-2 text-pink-600 hover:text-pink-700 transition-colors bg-pink-50 px-4 py-2 rounded-full hover:bg-pink-100"
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span className="font-medium text-sm sm:text-base">Contact Us</span>
-              </button>
             </div>
-            <div className="text-gray-600 text-sm sm:text-base">Reach out to our support team for assistance.</div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6">
+              <div className="flex items-center gap-3 p-4 border border-pink-100 rounded-xl bg-pink-50">
+                <Mail className="text-pink-600 w-5 h-5" />
+                <span className="text-sm sm:text-base font-medium text-gray-700">Support@panisho.com</span>
+              </div>
+              <div className="flex items-center gap-3 p-4 border border-pink-100 rounded-xl bg-pink-50">
+                <Phone className="text-pink-600 w-5 h-5" />
+                <span className="text-sm sm:text-base font-medium text-gray-700">+91 8401953848</span>
+              </div>
+              <div className="flex items-center gap-3 p-4 border border-pink-100 rounded-xl bg-pink-50">
+                <MapPin className="text-pink-600 w-5 h-5" />
+                <span className="text-sm sm:text-base font-medium text-gray-700">
+                  31 Reva Nagar, near South Zone Office, Udhana, Surat – 394210
+                </span>
+              </div>
+            </div>
+
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3">Frequently Asked Questions</h3>
+            <div className="space-y-2">
+              <div className="border border-pink-100 rounded-xl p-3 bg-gradient-to-br from-pink-50 to-white text-gray-700">
+                <p className="font-medium">Do you accept returns or refunds?</p>
+                <p className="text-sm text-gray-600 mt-1">We do not accept returns or offer refunds at this time.</p>
+              </div>
+              <div className="border border-pink-100 rounded-xl p-3 bg-gradient-to-br from-pink-50 to-white text-gray-700">
+                <p className="font-medium">What is the shipping time?</p>
+                <p className="text-sm text-gray-600 mt-1">Shipping usually takes 5–7 working days from the date of order.</p>
+              </div>
+            </div>
           </div>
         );
+
 
       default:
         return (
@@ -704,7 +790,10 @@ export default function ProfilePage() {
                 })}
               </nav>
               <button
-                onClick={() => { logout(); }}
+                onClick={async () => {
+                  await logout();         // ✅ call logout
+                  navigate('/account');      // ✅ redirect to login page
+                }}
                 className="mt-4 sm:mt-6 w-full flex items-center justify-center space-x-2 sm:space-x-3 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 sm:py-3 rounded-xl font-semibold transition-all hover:scale-105 shadow-md"
               >
                 <LogOut className="w-4 sm:w-5 h-4 sm:h-5" />
@@ -741,7 +830,11 @@ export default function ProfilePage() {
                   })}
                 </nav>
                 <button
-                  onClick={() => { logout(); setIsSidebarOpen(false); }}
+                  onClick={async () => {
+                    await logout();
+                    setIsSidebarOpen(false);
+                    navigate('/account');
+                  }}
                   className="mt-6 w-full flex items-center justify-center space-x-3 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold transition-all"
                 >
                   <LogOut className="w-5 h-5" />
@@ -755,91 +848,166 @@ export default function ProfilePage() {
             {renderContent()}
           </div>
 
-          {isEditAddressModalOpen && (
+          {isAddressModalOpen && (
             <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-              <div className="bg-white rounded-2xl p-6 w-full max-w-md text-start">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-gray-800">Edit Address</h2>
-                  <button onClick={() => setIsEditAddressModalOpen(false)} className="text-gray-600 hover:text-pink-600">
-                    <X className="w-6 h-6" />
-                  </button>
+              <div className="bg-white rounded-2xl p-6 w-full max-w-4xl text-start relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-pink-50 to-rose-50 opacity-50"></div>
+                <div className="absolute top-4 left-4 opacity-30">
+                  <svg className="w-16 h-16 text-pink-300" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-1-13h2v4h4v2h-4v4h-2v-4H7v-2h4V7z" />
+                  </svg>
                 </div>
-                <form onSubmit={handleAddressSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Address Type</label>
-                    <select
-                      value={editAddressForm.type}
-                      onChange={(e) => setEditAddressForm({ ...editAddressForm, type: e.target.value })}
-                      className="w-full p-2 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500"
+                <div className="relative z-10">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-pink-700">
+                      {editAddressForm.id ? 'Edit Address' : 'Add New Address'}
+                    </h2>
+                    <button onClick={() => setIsAddressModalOpen(false)} className="text-pink-600 hover:text-pink-800">
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+                  <form onSubmit={handleAddressSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-pink-700 mb-1">Address Type</label>
+                        <select
+                          value={editAddressForm.id ? editAddressForm.type : addAddressForm.type}
+                          onChange={(e) => {
+                            if (editAddressForm.id) {
+                              setEditAddressForm({ ...editAddressForm, type: e.target.value });
+                            } else {
+                              setAddAddressForm({ ...addAddressForm, type: e.target.value });
+                            }
+                          }}
+                          className="w-full p-2.5 border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white/80"
+                        >
+                          <option value="home">Home</option>
+                          <option value="office">Office</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-pink-700 mb-1">Full Name</label>
+                        <input
+                          type="text"
+                          value={editAddressForm.id ? editAddressForm.name : addAddressForm.name}
+                          onChange={(e) => {
+                            if (editAddressForm.id) {
+                              setEditAddressForm({ ...editAddressForm, name: e.target.value });
+                            } else {
+                              setAddAddressForm({ ...addAddressForm, name: e.target.value });
+                            }
+                          }}
+                          className="w-full p-2.5 border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white/80"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-pink-700 mb-1">Phone Number</label>
+                        <input
+                          type="tel"
+                          value={editAddressForm.id ? editAddressForm.phone : addAddressForm.phone}
+                          onChange={(e) => {
+                            if (editAddressForm.id) {
+                              setEditAddressForm({ ...editAddressForm, phone: e.target.value });
+                            } else {
+                              setAddAddressForm({ ...addAddressForm, phone: e.target.value });
+                            }
+                          }}
+                          className="w-full p-2.5 border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white/80"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-pink-700 mb-1">Street Address</label>
+                        <input
+                          type="text"
+                          value={editAddressForm.id ? editAddressForm.street : addAddressForm.street}
+                          onChange={(e) => {
+                            if (editAddressForm.id) {
+                              setEditAddressForm({ ...editAddressForm, street: e.target.value });
+                            } else {
+                              setAddAddressForm({ ...addAddressForm, street: e.target.value });
+                            }
+                          }}
+                          className="w-full p-2.5 border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white/80"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-pink-700 mb-1">Landmark</label>
+                        <input
+                          type="text"
+                          value={editAddressForm.id ? editAddressForm.landmark : addAddressForm.landmark}
+                          onChange={(e) => {
+                            if (editAddressForm.id) {
+                              setEditAddressForm({ ...editAddressForm, landmark: e.target.value });
+                            } else {
+                              setAddAddressForm({ ...addAddressForm, landmark: e.target.value });
+                            }
+                          }}
+                          className="w-full p-2.5 border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white/80"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-pink-700 mb-1">City</label>
+                        <input
+                          type="text"
+                          value={editAddressForm.id ? editAddressForm.city : addAddressForm.city}
+                          onChange={(e) => {
+                            if (editAddressForm.id) {
+                              setEditAddressForm({ ...editAddressForm, city: e.target.value });
+                            } else {
+                              setAddAddressForm({ ...addAddressForm, city: e.target.value });
+                            }
+                          }}
+                          className="w-full p-2.5 border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white/80"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-pink-700 mb-1">State</label>
+                        <input
+                          type="text"
+                          value={editAddressForm.id ? editAddressForm.state : addAddressForm.state}
+                          onChange={(e) => {
+                            if (editAddressForm.id) {
+                              setEditAddressForm({ ...editAddressForm, state: e.target.value });
+                            } else {
+                              setAddAddressForm({ ...addAddressForm, state: e.target.value });
+                            }
+                          }}
+                          className="w-full p-2.5 border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white/80"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-pink-700 mb-1">Pincode</label>
+                        <input
+                          type="text"
+                          value={editAddressForm.id ? editAddressForm.pincode : addAddressForm.pincode}
+                          onChange={(e) => {
+                            if (editAddressForm.id) {
+                              setEditAddressForm({ ...editAddressForm, pincode: e.target.value });
+                            } else {
+                              setAddAddressForm({ ...addAddressForm, pincode: e.target.value });
+                            }
+                          }}
+                          className="w-full p-2.5 border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white/80"
+                          required
+                        />
+                      </div>
+                    </div>
+                    {error && <div className="text-red-600 text-sm">{error}</div>}
+                    {success && <div className="text-green-600 text-sm">{success}</div>}
+                    <button
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white py-2.5 rounded-xl font-semibold transition-all hover:scale-105 shadow-md"
                     >
-                      <option value="home">Home</option>
-                      <option value="office">Office</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Name</label>
-                    <input
-                      type="text"
-                      value={editAddressForm.name}
-                      onChange={(e) => setEditAddressForm({ ...editAddressForm, name: e.target.value })}
-                      className="w-full p-2 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Street</label>
-                    <input
-                      type="text"
-                      value={editAddressForm.street}
-                      onChange={(e) => setEditAddressForm({ ...editAddressForm, street: e.target.value })}
-                      className="w-full p-2 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">City</label>
-                    <input
-                      type="text"
-                      value={editAddressForm.city}
-                      onChange={(e) => setEditAddressForm({ ...editAddressForm, city: e.target.value })}
-                      className="w-full p-2 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">State</label>
-                    <input
-                      type="text"
-                      value={editAddressForm.state}
-                      onChange={(e) => setEditAddressForm({ ...editAddressForm, state: e.target.value })}
-                      className="w-full p-2 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Pincode</label>
-                    <input
-                      type="text"
-                      value={editAddressForm.pincode}
-                      onChange={(e) => setEditAddressForm({ ...editAddressForm, pincode: e.target.value })}
-                      className="w-full p-2 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Phone</label>
-                    <input
-                      type="tel"
-                      value={editAddressForm.phone}
-                      onChange={(e) => setEditAddressForm({ ...editAddressForm, phone: e.target.value })}
-                      className="w-full p-2 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    />
-                  </div>
-                  {error && <div className="text-red-600 text-sm">{error}</div>}
-                  {success && <div className="text-green-600 text-sm">{success}</div>}
-                  <button
-                    type="submit"
-                    className="w-full bg-pink-600 hover:bg-pink-700 text-white py-2 rounded-xl font-semibold transition-colors"
-                  >
-                    Save Changes
-                  </button>
-                </form>
+                      {editAddressForm.id ? 'Save Changes' : 'Save Address'}
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
           )}
@@ -893,6 +1061,40 @@ export default function ProfilePage() {
               </div>
             </div>
           )}
+
+          {isForgotPasswordModalOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md text-start">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-gray-800">Forgot Password</h2>
+                  <button onClick={() => setIsForgotPasswordModalOpen(false)} className="text-gray-600 hover:text-pink-600">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className="w-full p-2 border border-pink-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500"
+                      required
+                    />
+                  </div>
+                  {error && <div className="text-red-600 text-sm">{error}</div>}
+                  {success && <div className="text-green-600 text-sm">{success}</div>}
+                  <button
+                    type="submit"
+                    className="w-full bg-pink-600 hover:bg-pink-700 text-white py-2 rounded-xl font-semibold transition-colors"
+                  >
+                    Send Reset Link
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
 
           {isContactModalOpen && (
             <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
