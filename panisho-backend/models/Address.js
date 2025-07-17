@@ -9,6 +9,7 @@ const addressSchema = new mongoose.Schema({
   state: String,
   pincode: String,
   phone: String,
+  landmark: String, // Added landmark field
   isDefault: { type: Boolean, default: false }
 }, { timestamps: true });
 

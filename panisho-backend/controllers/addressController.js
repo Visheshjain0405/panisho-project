@@ -6,10 +6,10 @@ exports.getAddresses = async (req, res) => {
 };
 
 exports.saveAddress = async (req, res) => {
-  const { type, name, street, city, state, pincode, phone } = req.body;
+  const { type, name, street, city, state, pincode, phone, landmark } = req.body;
   const userId = req.user._id;
 
-  const address = new Address({ userId, type, name, street, city, state, pincode, phone });
+  const address = new Address({ userId, type, name, street, city, state, pincode, phone, landmark });
   await address.save();
 
   res.status(201).json(address);
@@ -17,13 +17,13 @@ exports.saveAddress = async (req, res) => {
 
 exports.updateAddress = async (req, res) => {
   const { id } = req.params;
-  const updatedData = req.body;
+  const { type, name, street, city, state, pincode, phone, landmark } = req.body; // Updated to include landmark
   const userId = req.user._id;
 
   try {
     const address = await Address.findOneAndUpdate(
       { _id: id, userId },
-      updatedData,
+      { type, name, street, city, state, pincode, phone, landmark }, // Updated to include landmark
       { new: true }
     );
 

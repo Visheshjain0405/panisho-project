@@ -219,19 +219,7 @@ exports.generateEmailHTML = ({ order, user, address }) => {
                 </td>
               </tr>
               
-              <!-- Action Button -->
-              <tr>
-                <td style="padding: 30px; text-align: center; background: #fafafa; border-top: 1px solid #f0f0f0;">
-                  <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
-                    <tr>
-                      <td>
-                        <a href="${order.invoiceUrl}" class="button" style="display: inline-block; background: #e91e63; color: #ffffff; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; transition: background-color 0.3s ease;">View Your Invoice</a>
-                      </td>
-                    </tr>
-                  </table>
-                  <p style="margin: 20px 0 0 0; font-size: 12px; color: #999;">Need help? Contact us at <a href="mailto:support@panisho.com" style="color: #e91e63; text-decoration: none;">support@panisho.com</a></p>
-                </td>
-              </tr>
+              
               
               <!-- Footer -->
               <tr>

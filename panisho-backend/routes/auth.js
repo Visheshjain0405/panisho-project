@@ -2,7 +2,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const authController = require('../controllers/authController');
-
+const protect = require('../middleware/authMiddleware');
 const router = express.Router();
 
 // Validation chains
@@ -31,10 +31,16 @@ const loginValidations = [
 // Routes
 router.post('/signup', signupValidations, authController.signup);
 router.post('/verify-email', verifyEmailValidations, authController.verifyEmail);
+
+router.put('/change-password', protect, authController.changePassword);
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password/:token', authController.resetPassword);
 router.post('/login', loginValidations, authController.login);
 // routes/authRoutes.js
 router.get('/me', authController.getMe); // ✅ Add this
 
 router.get('/', authController.getAllUsers);
+router.post('/logout', authController.logout);
+
 
 module.exports = router;

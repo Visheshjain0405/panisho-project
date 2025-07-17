@@ -5,11 +5,12 @@ const protect = require('../middleware/authMiddleware'); // or adjust path if ne
 
 
 router.get('/my-orders', protect, orderController.getMyOrders);
+router.get('/payment-data', orderController.getPaymentData);
+router.get('/top-selling-products', orderController.getTopSellingProducts);
 
 router.get('/', orderController.getAllOrders);
 router.get('/:id', orderController.getOrderById);
 router.delete('/:id', orderController.deleteOrder);
 router.patch('/:id/status', orderController.updateOrderStatus);
-
 
 module.exports = router;

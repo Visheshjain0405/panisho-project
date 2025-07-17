@@ -10,6 +10,7 @@ const { uploadPDFBufferToCloudinary } = require('../utils/cloudinaryUpload');
 const transporter = require('../config/mailer');
 const { generateEmailHTML } = require('../utils/generateEmailHTML');
 const axios = require('axios');
+const { sendStockAlertEmail } = require('../utils/sendStockAlertEmail');
 
 const razorpayInstance = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -106,7 +107,7 @@ exports.placeOrder = async (req, res) => {
       return sum + price * item.quantity;
     }, 0);
 
-    const calculatedShipping = calculatedSubtotal > 499 ? 0 : 99;
+    const calculatedShipping = calculatedSubtotal > 499 ? 0 : 49;
     const calculatedTotal = calculatedSubtotal + calculatedShipping;
 
     const isValid = (val) => typeof val === 'number' && !isNaN(val);
@@ -150,6 +151,13 @@ exports.placeOrder = async (req, res) => {
       variant.stock -= item.quantity;
       product.variants[variantIndex] = variant;
       await product.save();
+
+      // ✅ Send stock alert if below threshold
+      const threshold = parseInt(process.env.STOCK_ALERT_THRESHOLD || '5', 10);
+      if (variant.stock < threshold) {
+        await sendStockAlertEmail(product.name, variant, variant.stock);
+      }
+
     }
 
     // ✅ Create the order
@@ -235,7 +243,14 @@ exports.placeOrder = async (req, res) => {
         order: { ...order.toObject(), items: itemsWithDetails },
         user,
         address
-      })
+      }),
+      attachments: [
+        {
+          filename: `invoice-${order._id}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
+        }
+      ]
     });
 
     // ✅ Clear cart
@@ -297,8 +312,16 @@ exports.placeBuyNowOrder = async (req, res) => {
         return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
       }
 
-      product.variants[variantIndex].stock -= item.quantity;
+      variant.stock -= item.quantity;
+      product.variants[variantIndex] = variant;
       await product.save();
+
+      // ✅ Send stock alert if below threshold
+      const threshold = parseInt(process.env.STOCK_ALERT_THRESHOLD || '5', 10);
+      if (variant.stock < threshold) {
+        await sendStockAlertEmail(product.name, variant, variant.stock);
+      }
+
     }
 
     const order = await Order.create({

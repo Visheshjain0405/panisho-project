@@ -9,7 +9,7 @@ exports.getAllOrders = async (req, res) => {
     const orders = await Order.find()
       .populate('userId', 'firstName lastName email mobile')
       .populate('items.productId', 'name sellingPrice')
-      .populate('addressId', 'street city state pincode');
+      .populate('addressId', 'street city state pincode landmark');
 
     res.status(200).json(orders);
   } catch (error) {
@@ -30,7 +30,7 @@ exports.getOrderById = async (req, res) => {
     const order = await Order.findById(id)
       .populate('userId', 'firstName lastname email mobile')
       .populate('items.productId', 'name sellingPrice')
-      .populate('addressId', 'street city state pincode');
+      .populate('addressId', 'street city state pincode landmark');
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
@@ -115,3 +115,88 @@ exports.getMyOrders = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// Get payment data and totals
+exports.getPaymentData = async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .populate('userId', 'firstName lastName email')
+      .select('orderId paymentMethod total paymentStatus createdAt');
+
+    const paymentTotals = await Order.aggregate([
+      {
+        $group: {
+          _id: '$paymentMethod',
+          totalAmount: { $sum: '$total' },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          paymentMethod: '$_id',
+          totalAmount: 1,
+          count: 1,
+          _id: 0
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      orders,
+      paymentTotals
+    });
+  } catch (error) {
+    console.error('Error fetching payment data:', error);
+    res.status(500).json({ message: 'Failed to fetch payment data' });
+  }
+};
+
+// Get most selling products
+exports.getTopSellingProducts = async (req, res) => {
+  try {
+    const topProducts = await Order.aggregate([
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.productId',
+          totalQuantitySold: { $sum: '$items.quantity' }
+        }
+      },
+      {
+        $lookup: {
+          from: 'products',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'product'
+        }
+      },
+      { $unwind: '$product' },
+      {
+        $project: {
+          productId: '$_id',
+          totalQuantitySold: 1,
+          name: '$product.name',
+          description: '$product.description',
+          images: '$product.images',
+          displayOptions: '$product.displayOptions',
+          variants: '$product.variants',
+          targetAudience: '$product.targetAudience',
+          category: '$product.category',
+          ingredients: '$product.ingredients',
+          usageInstructions: '$product.usageInstructions',
+          slug: '$product.slug'
+        }
+      },
+      { $sort: { totalQuantitySold: -1 } },
+      { $limit: 10 }
+    ]);
+
+    res.status(200).json(topProducts);
+  } catch (error) {
+    console.error('Error fetching top selling products:', error);
+    res.status(500).json({ message: 'Failed to get top selling products' });
+  }
+};
+
+
+     

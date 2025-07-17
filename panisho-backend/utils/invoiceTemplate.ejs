@@ -56,20 +56,12 @@
             gap: 15px;
         }
 
-        .logo-circle {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #e91e63, #f472b6);
+        .company-logo {
+            width: 50px;
+            height: 100%;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 14pt;
-            box-shadow: 0 3px 10px rgba(233, 30, 99, 0.3);
+            overflow: hidden;
         }
-
         .company-details {
             flex: 1;
         }
@@ -382,13 +374,14 @@
 
         <div class="header">
             <div class="company-section">
-                <div class="logo-circle">P</div>
+               <div class="company-logo">
+                <img src="https://res.cloudinary.com/dvqgcj6wn/image/upload/v1750615825/panisho_logo__page-0001-removebg-preview_hdipnw.png" alt="Company Logo">
+               </div>
                 <div class="company-details">
-                    <div class="company-name">PANISHO</div>
                     <div class="company-address">
                         Premium Beauty & Wellness Products<br>
-                        Navsari, Gujarat, India<br>
-                        support@panisho.com | +91 9054353157
+                        31 Reva nagar near south zone office udhana Surat - 394210<br>
+                        support@panisho.com | +91 8160467524
                     </div>
                 </div>
             </div>
@@ -524,20 +517,13 @@
                                 <span class="total-value">₹<%= (order.subtotal - order.discount).toFixed(2) %></span>
                             </div>
                             <% } %>
+                               
                                 <div class="total-row">
-                                    <span class="total-label">Tax Rate:</span>
-                                    <span class="total-value">0.00%</span>
-                                </div>
-                                <div class="total-row">
-                                    <span class="total-label">Total Tax:</span>
-                                    <span class="total-value">₹0.00</span>
-                                </div>
-                                <div class="total-row">
-                                    <span class="total-label">Shipping/Handling:</span>
+                                    <span class="total-label">Shipping:</span>
                                     <span class="total-value">₹<%= order.shipping.toFixed(2) %></span>
                                 </div>
                                 <div class="balance-due">
-                                    <span>Balance Due</span>
+                                    <span>Total Amount</span>
                                     <span>₹<%= order.total.toFixed(2) %></span>
                                 </div>
                     </div>
@@ -563,7 +549,7 @@
                         </div>
                     </div>
                     <div class="contact-footer">
-                        <strong>PANISHO</strong> | support@panisho.com | +91 9054353157 | www.panisho.com<br>
+                        <strong>PANISHO</strong> | support@panisho.com | +91 8401953848 | www.panisho.in<br>
                         Business Hours: Monday to Saturday, 9:00 AM - 6:00 PM
                     </div>
                     <div class="bottom-bar"></div>

@@ -4,7 +4,9 @@ const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Order = require('../models/Order'); // Make sure this is imported
 const transporter = require('../config/mailer');
+const crypto = require('crypto');
 
 // Utility: sign a JWT for a given user ID
 const signToken = (userId) =>
@@ -594,14 +596,14 @@ exports.login = async (req, res, next) => {
 
         // 4) Issue JWT & set cookie
         const token = signToken(user._id);
-        res
-            .cookie('jwt', token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                maxAge: 1000 * 60 * 60 * 24 * 7, // ✅ 7 days
-            })
-            .status(200)
-            .json({
+        // Login and verify-email controllers:
+        res.cookie('jwt', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days, match JWT expiry
+        })
+        .status(200)
+        .json({
                 status: 'success',
                 token,
                 data: {
@@ -623,32 +625,169 @@ exports.login = async (req, res, next) => {
 
 // GET /api/users
 exports.getAllUsers = async (req, res) => {
-    try {
-        const users = await User.find().select('-password -emailOTP');
-        res.json(users);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching users', error });
-    }
-}
-
-exports.getMe = async (req, res) => {
   try {
-    const token = req.cookies.jwt;
+    const users = await User.find().select('-password -emailOTP');
 
-    if (!token) {
-      return res.status(401).json({ message: 'Not logged in' });
-    }
+    // Aggregate orders grouped by userId
+    const orderStats = await Order.aggregate([
+      {
+        $group: {
+          _id: '$userId',
+          totalOrders: { $sum: 1 },
+          totalSpent: { $sum: '$total' },
+        },
+      },
+    ]);
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
+    // Convert to a map for easy lookup
+    const statsMap = {};
+    orderStats.forEach((stat) => {
+      statsMap[stat._id.toString()] = {
+        totalOrders: stat.totalOrders,
+        totalSpent: stat.totalSpent,
+      };
+    });
 
-    if (!user) {
-      return res.status(401).json({ message: 'User no longer exists' });
-    }
+    // Combine users with order stats
+    const enrichedUsers = users.map((user) => {
+      const stats = statsMap[user._id.toString()] || { totalOrders: 0, totalSpent: 0 };
+      return {
+        ...user.toObject(),
+        totalOrders: stats.totalOrders,
+        totalSpent: stats.totalSpent,
+      };
+    });
 
-    res.status(200).json({ user });
-  } catch (err) {
-    console.error('getMe error:', err);
-    return res.status(401).json({ message: 'Session expired or invalid' });
+    res.status(200).json(enrichedUsers);
+  } catch (error) {
+    console.error('Error in getAllUsers:', error);
+    res.status(500).json({ message: 'Error fetching users', error });
   }
 };
+
+
+
+exports.getMe = async (req, res) => {
+    try {
+        const token = req.cookies.jwt;
+
+        if (!token) {
+            return res.status(401).json({ message: 'Not logged in' });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findById(decoded.id).select('-password');
+
+        if (!user) {
+            return res.status(401).json({ message: 'User no longer exists' });
+        }
+
+        res.status(200).json({ user });
+    } catch (err) {
+        console.error('getMe error:', err);
+        return res.status(401).json({ message: 'Session expired or invalid' });
+    }
+};
+
+exports.logout = (req, res) => {
+    res.cookie('jwt', '', {
+        httpOnly: true,
+        expires: new Date(0),
+    });
+    res.status(200).json({ status: 'success', message: 'Logged out' });
+};
+
+/**
+ * @desc    Change current user password
+ * @route   PUT /api/auth/change-password
+ * @access  Private
+ */
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    // 1) Fetch user with password
+    const user = await User.findById(userId).select('+password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // 2) Check if current password is valid
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) return res.status(400).json({ message: 'Current password is incorrect' });
+
+    // 3) Hash and update password
+    const salt = await bcrypt.genSalt(12);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.status(200).json({ message: 'Password changed successfully' });
+  } catch (err) {
+    console.error('Change password error:', err);
+    res.status(500).json({ message: 'Failed to change password' });
+  }
+};
+
+/**
+ * @desc    Send password reset email
+ * @route   POST /api/auth/forgot-password
+ * @access  Public
+ */
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'Email not found' });
+
+    // Generate a secure reset token (not JWT)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpires = Date.now() + 15 * 60 * 1000; // 15 min
+    await user.save({ validateBeforeSave: false });
+
+    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+
+    await transporter.sendMail({
+      to: user.email,
+      from: `"Panisho Support" <${process.env.EMAIL_USER}>`,
+      subject: 'Reset your password - Panisho',
+      html: `<p>Click the link below to reset your password:</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>This link expires in 15 minutes.</p>`,
+    });
+
+    res.status(200).json({ message: 'Reset link sent to email' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ message: 'Failed to send reset link' });
+  }
+};
+
+/**
+ * @desc    Reset user password
+ * @route   POST /api/auth/reset-password/:token
+ * @access  Public
+ */
+exports.resetPassword = async (req, res) => {
+  try {
+    const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+
+    if (!user) return res.status(400).json({ message: 'Token is invalid or expired' });
+
+    const salt = await bcrypt.genSalt(12);
+    user.password = await bcrypt.hash(req.body.password, salt);
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successful' });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ message: 'Failed to reset password' });
+  }
+};
+

@@ -64,6 +64,7 @@ exports.createProduct = async (req, res) => {
       usageInstructions,
       displayOptions: Array.isArray(displayOptions) ? displayOptions : [],
       productTypes: Array.isArray(productTypes) ? productTypes : [],
+      slug: slugify(name, { lower: true, strict: true }), // <-- add this line
       variants: parsedVariants.map((v, i) => {
         if (parseInt(v.stock) < 1) {
           throw new Error(`Stock must be at least 1 for variant ${i + 1}`);
@@ -128,6 +129,17 @@ exports.getProductById = async (req, res) => {
   }
 };
 
+// ✅ Get product by slug
+exports.getProductBySlug = async (req, res) => {
+  try {
+    const product = await Product.findOne({ slug: req.params.slug }).populate('category', 'title slug');
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    res.json(product);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching product by slug', error: err.message });
+  }
+};
+
 // Update product
 exports.updateProduct = async (req, res) => {
   try {
@@ -162,8 +174,14 @@ exports.updateProduct = async (req, res) => {
       return res.status(400).json({ message: 'At least one variant is required.' });
     }
 
+    // Regenerate slug if name changes
+    if (name && name !== product.name) {
+      product.name = name;
+      product.slug = slugify(name, { lower: true, strict: true });
+    }
+
+
     // Update basic fields
-    product.name = name || product.name;
     product.description = description || product.description;
     product.category = category || product.category;
     product.ingredients = ingredients || product.ingredients;
@@ -251,7 +269,6 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
-// Get products by category slug
 // GET /products/category/:slug
 exports.getProductsByCategorySlug = async (req, res) => {
   try {
@@ -264,7 +281,7 @@ exports.getProductsByCategorySlug = async (req, res) => {
     }
 
     // Find products with matching category
-    const products = await Product.find({ category: category._id });
+    const products = await Product.find({ category: category._id }).populate('category', 'title slug');
 
     // Map variant fields to top-level for frontend use
     const formatted = products.map(p => {
@@ -272,6 +289,7 @@ exports.getProductsByCategorySlug = async (req, res) => {
       return {
         _id: p._id,
         name: p.name,
+        slug: p.slug,
         description: p.description,
         images: p.images,
         rating: p.rating || 4.2,
@@ -283,6 +301,7 @@ exports.getProductsByCategorySlug = async (req, res) => {
         sku: first.sku,
         variants: p.variants,
         createdAt: p.createdAt,
+        category: p.category
       };
     });
 

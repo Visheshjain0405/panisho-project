@@ -20,19 +20,23 @@ exports.uploadPDFBufferToCloudinary = (buffer, filename) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
-        resource_type: 'raw',
-        public_id: `invoices/${filename}`, // stored as invoices/filename.pdf
+        resource_type: 'auto',
+        upload_preset: 'public_raw_invoice',
+        public_id: `invoices/${filename}`, // e.g. invoices/invoice-12345
         format: 'pdf',
+        type: 'upload',
       },
       (error, result) => {
         if (error) return reject(error);
-        resolve(result.secure_url);
+        resolve(result.secure_url); // now public and inline-viewable
       }
     );
 
     streamifier.createReadStream(buffer).pipe(uploadStream);
   });
 };
+
+
 
 exports.uploadImageToCloudinary = (buffer, filename) => {
   return new Promise((resolve, reject) => {

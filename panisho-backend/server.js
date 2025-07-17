@@ -22,6 +22,10 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const sliderRoutes = require('./routes/sliderRoutes');
 const contactRoutes=require('./routes/contactRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const navbarCategoryRoutes = require('./routes/navbarCategoryRoutes');
+const newsletterRoutes = require('./routes/newsletterRoutes');
+const reportsRoutes=require('./routes/reports')
+const sitemapRoutes = require('./routes/sitemapRoute');
 const { errorHandler } = require('./middleware/errorHandler');
 const protect = require('./middleware/authMiddleware')
 
@@ -38,7 +42,7 @@ app.use(cors({
 app.use(helmet());
 
 // Body & Cookie parsing
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
 // NoSQL injection sanitize (body & params only)
@@ -63,6 +67,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+
 // Routes
 app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
@@ -77,6 +82,10 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/slider', sliderRoutes); // Slider routes
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/contact',contactRoutes)
+app.use('/api/navbar-categories', navbarCategoryRoutes);
+app.use('/api/newsletter', newsletterRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/', sitemapRoutes);
 
 // Fallback error handler (valid 3-digit status code)
 app.use((err, req, res, next) => {

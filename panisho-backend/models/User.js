@@ -9,6 +9,8 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true, select: false },
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   isVerified: { type: Boolean, default: false },
+  passwordResetToken: String,
+  passwordResetExpires: Date,
   emailOTP: {
     code: { type: String },
     expiresAt: { type: Date }
