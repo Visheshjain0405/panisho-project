@@ -34,9 +34,11 @@ connectDB();
 
 // CORS (allow your React at :3001 + cookies)
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://192.168.0.167:3001'],
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://192.168.0.167:3001', 'https://panisho-project.vercel.app'],
   credentials: true
 }));
+
+
 
 // Security headers
 app.use(helmet());
